@@ -94,7 +94,7 @@ def generate_schedule(year, month, holidays):
 
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
-    table = Table(data, colWidths=[40, 70, 70, 70, 70, 40])  # Ajustar el ancho de las columnas
+    table = Table(data, colWidths=[40, 70, 70, 70, 70, 70])  # Ajustar el ancho de las columnas
     style = TableStyle([
     ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Fondo de la cabecera
     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Color del texto en la cabecera
@@ -102,7 +102,7 @@ def generate_schedule(year, month, holidays):
     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Fuente negrita para la cabecera
     ('FONTSIZE', (0, 0), (-1, 0), 7),  # Reducir el tamaño de fuente en la cabecera
     ('BOTTOMPADDING', (0, 0), (-1, 0), 3),  # Reducir el padding inferior de la cabecera
-    ('TOPPADDING', (0, 0), (-1, 0), 3),  # Reducir el padding superior de la cabecera
+    ('TOPPADDING', (0, 0), (-1, 0), 4),  # Reducir el padding superior de la cabecera
     ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Fondo para el resto de la tabla
     ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño de fuente para el cuerpo de la tabla
     ('BOTTOMPADDING', (0, 1), (-1, -1), 2),  # Reducir el padding inferior de las filas
