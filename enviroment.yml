@@ -1,0 +1,12 @@
+name: streamlit_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - streamlit==1.23.0
+      - PyPDF2==3.0.1
+      - pdfplumber==0.8.1
+      - reportlab==4.0.4
+      - Pillow==9.5.0
