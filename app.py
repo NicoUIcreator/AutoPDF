@@ -23,10 +23,7 @@ with tab1:
     <h1 style='text-align: center;'>Procesador de PDFs Automático</h1>
     """, unsafe_allow_html=True)
 
-    try:
-        st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", use_container_width=False, width=150)
-    except Exception as e:
-        st.warning("No se pudo cargar el logo. Asegúrate de que el archivo 'logo.png' esté en el mismo directorio que este script.")
+    st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", use_container_width=False, width=500)
 
     st.markdown("""
     <p style='text-align: center;'>
@@ -115,7 +112,7 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
     x_position = (width - table_width) / 2  # Posición x para centrar
-    y_position = height - 350  # Ajustar la posición vertical más abajo
+    y_position = height - 450  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
     table.drawOn(can, x_position, y_position)
