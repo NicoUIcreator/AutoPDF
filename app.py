@@ -24,7 +24,7 @@ with tab1:
     """, unsafe_allow_html=True)
 
     try:
-        st.image("AutoPDF_transparent-.png.png", caption="Logo de Colaboring Barcelona SL", use_container_width=False, width=150)
+        st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", use_container_width=False, width=150)
     except Exception as e:
         st.warning("No se pudo cargar el logo. Asegúrate de que el archivo 'logo.png' esté en el mismo directorio que este script.")
 
