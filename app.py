@@ -92,7 +92,7 @@ def generate_schedule(year, month, holidays):
 
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
-    table = Table(data, colWidths=[40, 70, 70, 70, 70, 70])  # Ajustar el ancho de las columnas
+    table = Table(data, colWidths=[50, 80, 80, 80, 80, 80])  # Ajustar el ancho de las columnas
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -115,7 +115,7 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
     x_position = (width - table_width) / 2  # Posición x para centrar
-    y_position = height - 300  # Ajustar la posición vertical más abajo
+    y_position = height - 350  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
     table.drawOn(can, x_position, y_position)
