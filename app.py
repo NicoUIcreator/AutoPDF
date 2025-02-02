@@ -23,7 +23,12 @@ with tab1:
     <h1 style='text-align: center;'>Procesador de PDFs Automático</h1>
     """, unsafe_allow_html=True)
 
-    st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", use_container_width=False, width=500)
+    try:
+        # Intentar cargar la imagen localmente
+        st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=400)
+    except Exception as e:
+        # Si falla, cargar una imagen desde una URL pública
+        st.image("AutoPDF-.png", caption="Logo de Colaboring Barcelona SL", width=150)
 
     st.markdown("""
     <p style='text-align: center;'>
