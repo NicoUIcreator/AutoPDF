@@ -117,7 +117,7 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
     x_position = (width - table_width) / 2  # Posición x para centrar
-    y_position = height - 450  # Ajustar la posición vertical más abajo
+    y_position = height - 550  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
     table.drawOn(can, x_position, y_position)
