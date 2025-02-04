@@ -67,21 +67,41 @@ def split_pdf_by_worker(pdf_path):
     return zip_buffer, num_pages
 
 # Función para obtener festivos mediante la API
+import requests
+
 def get_holidays_api(year, country_code="ES", province_code="CAT"):
-    url = f"https://holidayapi.com/v1/holidays?pretty&key=YOUR_API_KEY&country={country_code}&year={year}&month=all"
-    response = requests.get(url)
-    if response.status_code == 200:
+    API_KEY = "a088b9e0-d74d-4339-8ed3-063693b0616c"  # Reemplaza con tu clave de Holiday API
+    url = f"https://holidayapi.com/v1/holidays?key={API_KEY}&country={country_code}&year={year}&language=es"
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Lanza un error si la respuesta no es 200
         holidays_data = response.json()
+
+        # Lista de festivos oficiales en Barcelona (respaldo en caso de fallo de la API)
+        barcelona_holidays = {
+            2024: ["01-01", "06-01", "29-03", "01-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"],
+            2025: ["01-01", "06-01", "18-04", "21-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"]
+        }
+
+        # Extraer los días festivos de la API
         holidays = set()
         for holiday in holidays_data.get("holidays", []):
             date_str = holiday.get("date", "")
-            if date_str:
-                day = int(date_str.split("-")[-1])  # Obtener el día
+            if date_str and date_str[5:] in barcelona_holidays.get(year, []):  # Compara solo MM-DD
+                day = int(date_str.split("-")[-1])
                 holidays.add(day)
+
+        if not holidays:  # Si la API no devuelve nada, usar los festivos locales
+            holidays = {int(date.split("-")[1]) for date in barcelona_holidays.get(year, [])}
+
         return holidays
-    else:
-        st.error("No se pudo obtener la información de festivos desde la API.")
-        return set()
+
+    except requests.RequestException as e:
+        print(f"Error al obtener los festivos desde la API: {e}")
+        # Usar la lista local de respaldo
+        return {int(date.split("-")[1]) for date in barcelona_holidays.get(year, [])}
+
 
 # Función para generar una tabla con los horarios
 def generate_schedule(month, year, holidays):
@@ -113,7 +133,7 @@ def generate_schedule(month, year, holidays):
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
     # Excluir la primera fila (cabecera) al crear la tabla
-    table = Table(data[1:], colWidths=[40, 60, 60, 60, 60, 60])
+    table = Table(data[1:], colWidths=[60, 80, 80, 80, 80, 80])
 
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -140,8 +160,8 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
     width, height = letter
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
-    x_position = (width - table_width) / 2 - 50  # Posición x ajustada hacia la izquierda
-    y_position = height - 300  # Ajustar la posición vertical más abajo
+    x_position = (width - table_width) / 2 - 75  # Posición x ajustada hacia la izquierda
+    y_position = height - 600  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
     table.drawOn(can, x_position, y_position)
