@@ -1,13 +1,69 @@
 import streamlit as st
+import PyPDF2
+from PyPDF2 import PdfReader, PdfWriter
+import zipfile
+import io
 import calendar
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 import pdfplumber
-import io
-from PyPDF2 import PdfReader, PdfWriter
 import os
+
+# Configuración de la página
+st.set_page_config(page_title="Procesador de PDFs Automático", layout="wide")
+
+# Crear pestañas
+tab1, tab2, tab3 = st.tabs(["Bienvenida", "Dividir Documento", "Completar Documento"])
+
+# Sección de Bienvenida
+with tab1:
+    st.markdown("""
+    <h1 style='text-align: center;'>Procesador de PDFs Automático</h1>
+    """, unsafe_allow_html=True)
+
+    try:
+        # Intentar cargar la imagen localmente
+        st.image("logo.png", caption="Logo de Colaboring Barcelona SL", width=150)
+    except Exception as e:
+        # Si falla, cargar una imagen desde una URL pública
+        st.image("https://example.com/path/to/AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=150)
+
+    st.markdown("""
+    <p style='text-align: center;'>
+    Bienvenido al Procesador de PDFs Automático. Esta herramienta te permite:
+    - Dividir un archivo PDF en múltiples documentos individuales.
+    - Completar automáticamente los registros de jornada laboral con horarios predefinidos.
+    </p>
+    """, unsafe_allow_html=True)
+
+# Función para dividir el PDF por páginas y guardar por nombre del trabajador
+def split_pdf_by_worker(pdf_path):
+    with open(pdf_path, "rb") as file:
+        reader = PdfReader(file)
+        num_pages = len(reader.pages)
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+            for page_num in range(num_pages):
+                writer = PdfWriter()
+                writer.add_page(reader.pages[page_num])
+
+                with pdfplumber.open(pdf_path) as plumber:
+                    text = plumber.pages[page_num].extract_text()
+                    if "Trabajador:" in text:
+                        worker_name = text.split("Trabajador:")[1].split("\n")[0].strip().replace(" ", "_")
+                    else:
+                        worker_name = f"pagina_{page_num + 1}"
+
+                output_filename = f"{worker_name}.pdf"
+                with io.BytesIO() as temp_buffer:
+                    writer.write(temp_buffer)
+                    temp_buffer.seek(0)
+                    zip_file.writestr(output_filename, temp_buffer.read())
+
+    return zip_buffer, num_pages
 
 # Festivos predefinidos para Barcelona
 barcelona_holidays = {
