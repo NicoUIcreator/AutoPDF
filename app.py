@@ -1,120 +1,36 @@
 import streamlit as st
-import PyPDF2
-from PyPDF2 import PdfReader, PdfWriter
-import zipfile
-import io
 import calendar
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 import pdfplumber
+import io
+from PyPDF2 import PdfReader, PdfWriter
 import os
-import requests
 
-# Configuración de la página
-st.set_page_config(page_title="Procesador de PDFs Automático", layout="wide")
+# Festivos predefinidos para Barcelona
+barcelona_holidays = {
+    2024: ["01-01", "06-01", "29-03", "01-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"],
+    2025: ["01-01", "06-01", "18-04", "21-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"]
+}
 
-# Crear pestañas
-tab1, tab2, tab3 = st.tabs(["Bienvenida", "Dividir Documento", "Completar Documento"])
-
-# Sección de Bienvenida
-with tab1:
-    st.markdown("""
-    <h1 style='text-align: center;'>Procesador de PDFs Automático</h1>
-    """, unsafe_allow_html=True)
-
-    try:
-        # Intentar cargar la imagen localmente
-        st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=150)
-    except Exception as e:
-        # Si falla, cargar una imagen desde una URL pública
-        st.image("https://example.com/path/to/AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=150)
-
-    st.markdown("""
-    <p style='text-align: center;'>
-    Bienvenido al Procesador de PDFs Automático. Esta herramienta te permite:
-    - Dividir un archivo PDF en múltiples documentos individuales.
-    - Completar automáticamente los registros de jornada laboral con horarios predefinidos.
-    </p>
-    """, unsafe_allow_html=True)
-
-# Función para dividir el PDF por páginas y guardar por nombre del trabajador
-def split_pdf_by_worker(pdf_path):
-    with open(pdf_path, "rb") as file:
-        reader = PdfReader(file)
-        num_pages = len(reader.pages)
-
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-            for page_num in range(num_pages):
-                writer = PdfWriter()
-                writer.add_page(reader.pages[page_num])
-
-                with pdfplumber.open(pdf_path) as plumber:
-                    text = plumber.pages[page_num].extract_text()
-                    if "Trabajador:" in text:
-                        worker_name = text.split("Trabajador:")[1].split("\n")[0].strip().replace(" ", "_")
-                    else:
-                        worker_name = f"pagina_{page_num + 1}"
-
-                output_filename = f"{worker_name}.pdf"
-                with io.BytesIO() as temp_buffer:
-                    writer.write(temp_buffer)
-                    temp_buffer.seek(0)
-                    zip_file.writestr(output_filename, temp_buffer.read())
-
-    return zip_buffer, num_pages
-
-# Función para obtener festivos mediante la API
-import requests
-
-def get_holidays_api(year, country_code="ES", province_code="CAT"):
-    API_KEY = "a088b9e0-d74d-4339-8ed3-063693b0616c"  # Reemplaza con tu clave de Holiday API
-    url = f"https://holidayapi.com/v1/holidays?key={API_KEY}&country={country_code}&year={year}&language=es"
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Lanza un error si la respuesta no es 200
-        holidays_data = response.json()
-
-        # Lista de festivos oficiales en Barcelona (respaldo en caso de fallo de la API)
-        barcelona_holidays = {
-            2024: ["01-01", "06-01", "29-03", "01-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"],
-            2025: ["01-01", "06-01", "18-04", "21-04", "01-05", "24-06", "15-08", "11-09", "24-09", "12-10", "01-11", "06-12", "08-12", "25-12", "26-12"]
-        }
-
-        # Extraer los días festivos de la API
-        holidays = set()
-        for holiday in holidays_data.get("holidays", []):
-            date_str = holiday.get("date", "")
-            if date_str and date_str[5:] in barcelona_holidays.get(year, []):  # Compara solo MM-DD
-                day = int(date_str.split("-")[-1])
-                holidays.add(day)
-
-        if not holidays:  # Si la API no devuelve nada, usar los festivos locales
-            holidays = {int(date.split("-")[1]) for date in barcelona_holidays.get(year, [])}
-
-        return holidays
-
-    except requests.RequestException as e:
-        print(f"Error al obtener los festivos desde la API: {e}")
-        # Usar la lista local de respaldo
-        return {int(date.split("-")[1]) for date in barcelona_holidays.get(year, [])}
-
-
-# Función para generar una tabla con los horarios
-def generate_schedule(month, year, holidays):
+# Función para generar la tabla de horarios excluyendo fines de semana y festivos
+def generate_schedule(month, year):
     cal = calendar.Calendar()
     weekdays = [(day, weekday) for day, weekday in cal.itermonthdays2(year, month) if day != 0]
+    
+    # Obtener los festivos en formato "dd-mm"
+    holiday_set = {f"{day}" for day in barcelona_holidays.get(year, [])}
 
-    data = [
-        ["DIA", "MAÑANAS ENTRADA", "MAÑANAS SALIDA", "TARDES ENTRADA", "TARDES SALIDA", "HORAS ORDINARIAS"]
-    ]
-
+    data = [["DIA", "MAÑANAS ENTRADA", "MAÑANAS SALIDA", "TARDES ENTRADA", "TARDES SALIDA", "HORAS ORDINARIAS"]]
     total_hours = 0
+
     for day, weekday in weekdays:
-        if weekday < 5 and day not in holidays:  # Solo días laborables
+        day_str = f"{day:02d}-{month:02d}"  # Formato dd-mm
+
+        # Solo agregar si no es fin de semana ni festivo
+        if weekday < 5 and day_str not in holiday_set:
             morning_entry = "08:00"
             morning_exit = "14:00"
             afternoon_entry = "15:00"
@@ -122,20 +38,15 @@ def generate_schedule(month, year, holidays):
             hours = 8
             total_hours += hours
         else:
-            morning_entry = ""
-            morning_exit = ""
-            afternoon_entry = ""
-            afternoon_exit = ""
-            hours = ""
+            morning_entry = morning_exit = afternoon_entry = afternoon_exit = hours = ""
 
         data.append([str(day), morning_entry, morning_exit, afternoon_entry, afternoon_exit, str(hours)])
 
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
-    # Excluir la primera fila (cabecera) al crear la tabla
+    # Crear tabla
     table = Table(data[1:], colWidths=[60, 80, 80, 80, 80, 80])
-
-    style = TableStyle([
+    table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -148,39 +59,11 @@ def generate_schedule(month, year, holidays):
         ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
         ('TOPPADDING', (0, 1), (-1, -1), 2),
         ('ROWHEIGHT', (0, 1), (-1, -1), 15),
-    ])
-    table.setStyle(style)
+    ]))
 
     return table
 
-# Superponer la tabla sobre el PDF
-def overlay_table_on_pdf(input_pdf, output_pdf, table):
-    packet = io.BytesIO()
-    can = canvas.Canvas(packet, pagesize=letter)
-    width, height = letter
-
-    table_width = sum(table._colWidths)  # Ancho total de la tabla
-    x_position = (width - table_width) / 2 - 75  # Posición x ajustada hacia la izquierda
-    y_position = height - 600  # Ajustar la posición vertical más abajo
-
-    table.wrapOn(can, width, height)
-    table.drawOn(can, x_position, y_position)
-    can.save()
-
-    packet.seek(0)
-    new_pdf = PdfReader(packet)
-
-    existing_pdf = PdfReader(input_pdf)
-    output = PdfWriter()
-
-    page = existing_pdf.pages[0]
-    page.merge_page(new_pdf.pages[0])
-    output.add_page(page)
-
-    with open(output_pdf, "wb") as output_file:
-        output.write(output_file)
-
-# Función para detectar automáticamente el mes en el documento PDF
+# Función para detectar mes y año en PDF
 def extract_month_year(pdf_path):
     with pdfplumber.open(pdf_path) as plumber:
         first_page_text = plumber.pages[0].extract_text()
@@ -193,38 +76,43 @@ def extract_month_year(pdf_path):
                 st.error("No se pudo extraer el mes y año correctamente del PDF.")
     return None, None
 
-# Sección "Dividir Documento"
-with tab2:
-    st.markdown("""
-    <h2 style='text-align: center;'>Dividir Documento</h2>
-    """, unsafe_allow_html=True)
+# Superponer tabla en el PDF
+def overlay_table_on_pdf(input_pdf, output_pdf, table):
+    packet = io.BytesIO()
+    can = canvas.Canvas(packet, pagesize=letter)
+    width, height = letter
 
-    uploaded_file = st.file_uploader("Sube tu archivo PDF para dividirlo", type=["pdf"])
-    if uploaded_file is not None:
-        temp_pdf_path = "temp.pdf"
-        with open(temp_pdf_path, "wb") as temp_file:
-            temp_file.write(uploaded_file.read())
+    table_width = sum(table._colWidths)
+    x_position = (width - table_width) / 2 - 75
+    y_position = height - 600
 
-        zip_buffer, num_pages = split_pdf_by_worker(temp_pdf_path)
-        st.success(f"El PDF ha sido dividido en {num_pages} páginas.")
+    table.wrapOn(can, width, height)
+    table.drawOn(can, x_position, y_position)
+    can.save()
 
-        st.download_button(
-            label="Descargar archivos divididos",
-            data=zip_buffer.getvalue(),
-            file_name="documentos_divididos.zip",
-            mime="application/zip"
-        )
+    packet.seek(0)
+    new_pdf = PdfReader(packet)
+    existing_pdf = PdfReader(input_pdf)
+    output = PdfWriter()
 
-        if os.path.exists(temp_pdf_path):
-            os.remove(temp_pdf_path)
+    page = existing_pdf.pages[0]
+    page.merge_page(new_pdf.pages[0])
+    output.add_page(page)
+
+    with open(output_pdf, "wb") as output_file:
+        output.write(output_file)
+
+# Streamlit UI
+st.set_page_config(page_title="Procesador de PDFs", layout="wide")
+st.markdown("<h1 style='text-align: center;'>Procesador de PDFs Automático</h1>", unsafe_allow_html=True)
+
+tab1, tab2 = st.tabs(["Dividir Documento", "Completar Documento"])
 
 # Sección "Completar Documento"
-with tab3:
-    st.markdown("""
-    <h2 style='text-align: center;'>Completar Documento</h2>
-    """, unsafe_allow_html=True)
-
+with tab2:
+    st.markdown("<h2 style='text-align: center;'>Completar Documento</h2>", unsafe_allow_html=True)
     uploaded_file_individual = st.file_uploader("Sube un archivo PDF individual para completarlo", type=["pdf"])
+
     if uploaded_file_individual is not None:
         temp_individual_pdf_path = "temp_individual.pdf"
         with open(temp_individual_pdf_path, "wb") as temp_file:
@@ -237,25 +125,15 @@ with tab3:
         else:
             st.info(f"Se detectó el mes {calendar.month_name[month]} del año {year}.")
 
-            # Obtener festivos de Barcelona para el mes y año detectados
-            holidays = get_holidays_api(year, country_code="ES", province_code="CAT")
-            st.info(f"Festivos detectados: {sorted(holidays)}")
-
-            schedule_table = generate_schedule(month, year, holidays)
+            # Generar la tabla de horarios
+            schedule_table = generate_schedule(month, year)
             output_pdf_path = "output_completed.pdf"
             overlay_table_on_pdf(temp_individual_pdf_path, output_pdf_path, schedule_table)
             st.success("El PDF ha sido procesado correctamente.")
 
             with open(output_pdf_path, "rb") as file:
-                btn = st.download_button(
-                    label="Descargar PDF completado",
-                    data=file,
-                    file_name="output_completed.pdf",
-                    mime="application/pdf"
-                )
+                st.download_button(label="Descargar PDF completado", data=file, file_name="output_completed.pdf", mime="application/pdf")
 
         # Eliminar archivos temporales
-        if os.path.exists(temp_individual_pdf_path):
-            os.remove(temp_individual_pdf_path)
-        if os.path.exists(output_pdf_path):
-            os.remove(output_pdf_path)
+        os.remove(temp_individual_pdf_path)
+        os.remove(output_pdf_path)
