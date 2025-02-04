@@ -10,6 +10,7 @@ from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 import pdfplumber
 import os
+import requests
 
 # Configuración de la página
 st.set_page_config(page_title="Procesador de PDFs Automático", layout="wide")
@@ -25,10 +26,10 @@ with tab1:
 
     try:
         # Intentar cargar la imagen localmente
-        st.image("logo.png", caption="Logo de Colaboring Barcelona SL", width=400)
+        st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=150)
     except Exception as e:
         # Si falla, cargar una imagen desde una URL pública
-        st.image("logo.png", caption="Logo de Colaboring Barcelona SL", width=150)
+        st.image("https://example.com/path/to/AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=150)
 
     st.markdown("""
     <p style='text-align: center;'>
@@ -65,8 +66,25 @@ def split_pdf_by_worker(pdf_path):
 
     return zip_buffer, num_pages
 
+# Función para obtener festivos mediante la API
+def get_holidays_api(year, country_code="ES", province_code="CAT"):
+    url = f"https://holidayapi.com/v1/holidays?pretty&key=YOUR_API_KEY&country={country_code}&year={year}&month=all"
+    response = requests.get(url)
+    if response.status_code == 200:
+        holidays_data = response.json()
+        holidays = set()
+        for holiday in holidays_data.get("holidays", []):
+            date_str = holiday.get("date", "")
+            if date_str:
+                day = int(date_str.split("-")[-1])  # Obtener el día
+                holidays.add(day)
+        return holidays
+    else:
+        st.error("No se pudo obtener la información de festivos desde la API.")
+        return set()
+
 # Función para generar una tabla con los horarios
-def generate_schedule(year, month, holidays):
+def generate_schedule(month, year, holidays):
     cal = calendar.Calendar()
     weekdays = [(day, weekday) for day, weekday in cal.itermonthdays2(year, month) if day != 0]
 
@@ -94,20 +112,22 @@ def generate_schedule(year, month, holidays):
 
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
-    table = Table(data, colWidths=[40, 70, 70, 70, 70, 70])  # Ajustar el ancho de las columnas
+    # Excluir la primera fila (cabecera) al crear la tabla
+    table = Table(data[1:], colWidths=[40, 60, 60, 60, 60, 60])
+
     style = TableStyle([
-    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Fondo de la cabecera
-    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Color del texto en la cabecera
-    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Alineación centrada para toda la tabla
-    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Fuente negrita para la cabecera
-    ('FONTSIZE', (0, 0), (-1, 0), 7),  # Reducir el tamaño de fuente en la cabecera
-    ('BOTTOMPADDING', (0, 0), (-1, 0), 3),  # Reducir el padding inferior de la cabecera
-    ('TOPPADDING', (0, 0), (-1, 0), 4),  # Reducir el padding superior de la cabecera
-    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Fondo para el resto de la tabla
-    ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño de fuente para el cuerpo de la tabla
-    ('BOTTOMPADDING', (0, 1), (-1, -1), 2),  # Reducir el padding inferior de las filas
-    ('TOPPADDING', (0, 1), (-1, -1), 2),  # Reducir el padding superior de las filas
-    ('ROWHEIGHT', (0, 1), (-1, -1), 15),  # Ajustar la altura de las filas (valor en puntos)
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
+        ('TOPPADDING', (0, 0), (-1, 0), 3),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('FONTSIZE', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
+        ('TOPPADDING', (0, 1), (-1, -1), 2),
+        ('ROWHEIGHT', (0, 1), (-1, -1), 15),
     ])
     table.setStyle(style)
 
@@ -120,8 +140,8 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
     width, height = letter
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
-    x_position = ((width - table_width) / 2)-10  # Posición x para centrar
-    y_position = height - 600  # Ajustar la posición vertical más abajo
+    x_position = (width - table_width) / 2 - 50  # Posición x ajustada hacia la izquierda
+    y_position = height - 300  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
     table.drawOn(can, x_position, y_position)
@@ -139,6 +159,19 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
 
     with open(output_pdf, "wb") as output_file:
         output.write(output_file)
+
+# Función para detectar automáticamente el mes en el documento PDF
+def extract_month_year(pdf_path):
+    with pdfplumber.open(pdf_path) as plumber:
+        first_page_text = plumber.pages[0].extract_text()
+        if "Mes y Año:" in first_page_text:
+            month_year_str = first_page_text.split("Mes y Año:")[1].split("\n")[0].strip()
+            try:
+                month, year = map(int, month_year_str.split("/"))
+                return month, year
+            except ValueError:
+                st.error("No se pudo extraer el mes y año correctamente del PDF.")
+    return None, None
 
 # Sección "Dividir Documento"
 with tab2:
@@ -177,23 +210,31 @@ with tab3:
         with open(temp_individual_pdf_path, "wb") as temp_file:
             temp_file.write(uploaded_file_individual.read())
 
-        year = 2025
-        month = 1
-        holidays = [1, 6]  # Festivos en Barcelona
+        # Detectar mes y año del PDF
+        month, year = extract_month_year(temp_individual_pdf_path)
+        if month is None or year is None:
+            st.error("No se pudo determinar el mes y año del PDF.")
+        else:
+            st.info(f"Se detectó el mes {calendar.month_name[month]} del año {year}.")
 
-        schedule_table = generate_schedule(year, month, holidays)
-        output_pdf_path = "output_completed.pdf"
-        overlay_table_on_pdf(temp_individual_pdf_path, output_pdf_path, schedule_table)
-        st.success("El PDF ha sido procesado correctamente.")
+            # Obtener festivos de Barcelona para el mes y año detectados
+            holidays = get_holidays_api(year, country_code="ES", province_code="CAT")
+            st.info(f"Festivos detectados: {sorted(holidays)}")
 
-        with open(output_pdf_path, "rb") as file:
-            btn = st.download_button(
-                label="Descargar PDF completado",
-                data=file,
-                file_name="output_completed.pdf",
-                mime="application/pdf"
-            )
+            schedule_table = generate_schedule(month, year, holidays)
+            output_pdf_path = "output_completed.pdf"
+            overlay_table_on_pdf(temp_individual_pdf_path, output_pdf_path, schedule_table)
+            st.success("El PDF ha sido procesado correctamente.")
 
+            with open(output_pdf_path, "rb") as file:
+                btn = st.download_button(
+                    label="Descargar PDF completado",
+                    data=file,
+                    file_name="output_completed.pdf",
+                    mime="application/pdf"
+                )
+
+        # Eliminar archivos temporales
         if os.path.exists(temp_individual_pdf_path):
             os.remove(temp_individual_pdf_path)
         if os.path.exists(output_pdf_path):
