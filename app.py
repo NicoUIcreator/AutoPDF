@@ -112,14 +112,14 @@ def generate_schedule(month, year, holidays):
     table = Table(data[1:], colWidths=[50, 70, 70, 70, 70, 70])  # Ajustar anchos de columna
 
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 7),  # Reducir el tamaño del texto en la cabecera
         ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
         ('TOPPADDING', (0, 0), (-1, 0), 3),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
         ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño del texto en el cuerpo
         ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
         ('TOPPADDING', (0, 1), (-1, -1), 2),
