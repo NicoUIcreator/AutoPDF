@@ -117,7 +117,7 @@ def generate_schedule(month, year, holidays):
         ('FONTSIZE', (0, 0), (-1, 0), 7),  # Reducir el tamaño del texto en la cabecera
         ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
         ('TOPPADDING', (0, 0), (-1, 0), 3),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.transparent),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
         ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño del texto en el cuerpo
         ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
         ('TOPPADDING', (0, 1), (-1, -1), 2),
@@ -134,7 +134,7 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
     width, height = letter
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
-    x_position = (width - table_width) / 2 - 85  # Posición x ajustada hacia la izquierda
+    x_position = (width - table_width) / 2 - 90  # Posición x ajustada hacia la izquierda
     y_position = height - 605  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
