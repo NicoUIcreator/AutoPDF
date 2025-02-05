@@ -156,18 +156,25 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
     with open(output_pdf, "wb") as output_file:
         output.write(output_file)
 
-# Función para detectar automáticamente el mes y año en el documento PDF
-def extract_month_year(pdf_path):
+# Función para detectar automáticamente el mes, año y nombre del trabajador en el documento PDF
+def extract_info(pdf_path):
     with pdfplumber.open(pdf_path) as plumber:
         first_page_text = plumber.pages[0].extract_text()
         if "Mes y Año:" in first_page_text:
             month_year_str = first_page_text.split("Mes y Año:")[1].split("\n")[0].strip()
             try:
                 month, year = map(int, month_year_str.split("/"))
-                return month, year
             except ValueError:
                 st.error("No se pudo extraer el mes y año correctamente del PDF.")
-    return None, None
+                return None, None, None
+
+        if "Trabajador:" in first_page_text:
+            worker_name = first_page_text.split("Trabajador:")[1].split("\n")[0].strip().replace(" ", "_")
+        else:
+            st.error("No se pudo extraer el nombre del trabajador del PDF.")
+            return None, None, None
+
+    return worker_name, month, year
 
 # Sección "Dividir Documento"
 with tab2:
@@ -206,27 +213,31 @@ with tab3:
         with open(temp_individual_pdf_path, "wb") as temp_file:
             temp_file.write(uploaded_file_individual.read())
 
-        # Detectar mes y año del PDF
-        month, year = extract_month_year(temp_individual_pdf_path)
-        if month is None or year is None:
-            st.error("No se pudo determinar el mes y año del PDF.")
+        # Extraer información del PDF
+        worker_name, month, year = extract_info(temp_individual_pdf_path)
+        if worker_name is None or month is None or year is None:
+            st.error("No se pudo extraer toda la información necesaria del PDF.")
         else:
-            st.info(f"Se detectó el mes {calendar.month_name[month]} del año {year}.")
+            st.info(f"Se detectó el trabajador: {worker_name.replace('_', ' ')}, mes: {calendar.month_name[month]}, año: {year}.")
 
             # Obtener festivos de Barcelona para el año detectado
             holidays = get_barcelona_holidays(year)
             st.info(f"Festivos detectados: {[f'{day:02d}-{month:02d}' for month, day in holidays if month == month]}")
 
+            # Generar la tabla de horarios
             schedule_table = generate_schedule(month, year, holidays)
-            output_pdf_path = "output_completed.pdf"
+
+            # Ruta temporal para el PDF procesado
+            output_pdf_path = f"{worker_name}_completado.pdf"
             overlay_table_on_pdf(temp_individual_pdf_path, output_pdf_path, schedule_table)
             st.success("El PDF ha sido procesado correctamente.")
 
+            # Permitir la descarga del archivo procesado con el nombre del trabajador
             with open(output_pdf_path, "rb") as file:
                 btn = st.download_button(
                     label="Descargar PDF completado",
                     data=file,
-                    file_name="output_completed.pdf",
+                    file_name=output_pdf_path,
                     mime="application/pdf"
                 )
 
