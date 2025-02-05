@@ -109,21 +109,19 @@ def generate_schedule(month, year, holidays):
     data.append(["TOTAL", "", "", "", "", str(total_hours)])
 
     # Excluir la primera fila (cabecera) al crear la tabla
-    table = Table(data[1:], colWidths=[50, 50, 50, 50, 50, 70])  # Ajustar anchos de columna
+    table = Table(data[1:], colWidths=[50, 60, 60, 60, 60, 80])  # Ajustar anchos de columna
 
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 7),  # Reducir el tamaño del texto en la cabecera
         ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
         ('TOPPADDING', (0, 0), (-1, 0), 3),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.transparent),
         ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño del texto en el cuerpo
         ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
         ('TOPPADDING', (0, 1), (-1, -1), 2),
-        ('ROWHEIGHT', (0, 1), (-1, -1), 8),  # Ajustar la altura de las filas
+        ('ROWHEIGHT', (0, 1), (-1, -1), 5),  # Ajustar la altura de las filas
     ])
     table.setStyle(style)
 
@@ -136,7 +134,7 @@ def overlay_table_on_pdf(input_pdf, output_pdf, table):
     width, height = letter
 
     table_width = sum(table._colWidths)  # Ancho total de la tabla
-    x_position = (width - table_width) / 2 - 75  # Posición x ajustada hacia la izquierda
+    x_position = (width - table_width) / 2 - 85  # Posición x ajustada hacia la izquierda
     y_position = height - 605  # Ajustar la posición vertical más abajo
 
     table.wrapOn(can, width, height)
