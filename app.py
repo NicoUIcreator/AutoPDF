@@ -25,7 +25,7 @@ with tab1:
 
     try:
         # Intentar cargar la imagen localmente
-        st.image("logo.png", caption="Logo de Colaboring Barcelona SL", width=400)
+        st.image("logo.png", caption="Colaboring Barcelona SL", width=400)
     except Exception as e:
         # Si falla, cargar una imagen desde una URL pública
         st.image("AutoPDF_transparent-.png", caption="Logo de Colaboring Barcelona SL", width=400)
@@ -112,7 +112,7 @@ def generate_schedule(month, year, holidays):
     table = Table(data[1:], colWidths=[50, 70, 70, 70, 70, 70])  # Ajustar anchos de columna
 
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -123,7 +123,7 @@ def generate_schedule(month, year, holidays):
         ('FONTSIZE', (0, 1), (-1, -1), 6),  # Reducir el tamaño del texto en el cuerpo
         ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
         ('TOPPADDING', (0, 1), (-1, -1), 2),
-        ('ROWHEIGHT', (0, 1), (-1, -1), 15),  # Ajustar la altura de las filas
+        ('ROWHEIGHT', (0, 1), (-1, -1), 10),  # Ajustar la altura de las filas
     ])
     table.setStyle(style)
 
